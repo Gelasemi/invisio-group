@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INVISO Group - Pilotage Stratégique Intégré</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Librairies Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #f3f4f6; }
+        .sidebar { background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); width: 280px; }
+        .card { background: white; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; }
+        
+        .status-good { color: #16a34a; } .bg-good { background-color: #dcfce7; }
+        .status-warn { color: #ca8a04; } .bg-warn { background-color: #fef9c3; }
+        .status-danger { color: #dc2626; } .bg-danger { background-color: #fee2e2; }
+        
+        .dropdown-menu { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .dropdown-menu.open { max-height: 1000px; }
+        
+        /* Modal Styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center; }
+        .modal-active { display: flex; }
+        
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e0; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden">
+
+    <!-- MODAL POUR UPLOAD -->
+    <div id="upload-modal" class="modal-overlay">
+        <div class="bg-white rounded-lg p-8 w-full max-w-lg shadow-2xl">
+            <h3 class="text-xl font-bold mb-4"><i class="fas fa-upload mr-2 text-teal-600"></i>Importation Mensuelle</h3>
+            <p class="text-sm text-gray-500 mb-4">Chargez le fichier Excel/CSV des résultats mensuels.</p>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-teal-500 transition">
+                <input type="file" id="file-input" class="hidden" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event)">
+                <label for="file-input" class="cursor-pointer">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2 block"></i>
+                    <span class="text-sm text-gray-600" id="file-name">Cliquez ou déposez un fichier ici</span>
+                </label>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button onclick="closeModal()" class="px-4 py-2 bg-gray-100 rounded text-gray-600 hover:bg-gray-200">Annuler</button>
+                <button onclick="processUpload()" class="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700">Mettre à jour</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar min-h-screen flex flex-col text-gray-400">
+        <div class="p-6 border-b border-slate-700">
+            <h1 class="text-xl font-bold text-white">INVISO<span class="text-teal-400">GROUP</span></h1>
+            <p class="text-xs text-gray-500 mt-1">Pilotage Intégré & IA</p>
+        </div>
+        
+        <nav class="flex-1 p-3 overflow-y-auto">
+            <button onclick="showView('group')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-teal-700 text-white shadow-lg mb-4 hover:bg-teal-600">
+                <i class="fas fa-globe"></i>
+                <span class="font-bold">Vue Globale Groupe</span>
+            </button>
+
+            <div class="mb-2 mt-2 px-2 text-xs uppercase text-gray-500 font-semibold">Pôles d'Activité</div>
+            
+            <!-- Pôle Agri -->
+            <div class="mb-1">
+                <button onclick="toggleDropdown('agri-drop')" class="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-800 rounded-lg">
+                    <span><i class="fas fa-seedling text-green-400 mr-2"></i>Agribusiness</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </button>
+                <div id="agri-drop" class="dropdown-menu pl-4">
+                    <button onclick="loadCompany('AGRIVET')" class="w-full text-left px-3 py-2 text-sm hover:text-white hover:bg-slate-700 rounded">AGRIVET</button>
+                    <button onclick="loadCompany('AGRIFARM')" class="w-full text-left px-3 py-2 text-sm hover:text-white hover:bg-slate-700 rounded">AGRIFARM</button>
+                    <button onclick="loadCompany('AGRIKOBA')" class="w-full text-left px-3 py-2 text-sm hover:text-white hover:bg-slate-700 rounded">AGRIKOBA</button>
+                    <button onclick="loadCompany('BOVIMA')" class="w-full text-left px-3 py-2 text-sm hover:text-white hover:bg-slate-700 rounded">BOVIMA</button>
+                    <button onclick="loadCompany('MABEL')" class="w-full text-left px-3 py-2 text-sm hover:text-white hover:bg-slate-700 rounded">MABEL</button>
+                </div>
+            </div>
+
+            <!-- Pôle Industrie -->
+            <div class="mb-1">
+                <button onclick="toggleDropdown('indus-drop')" class="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-800 rounded-lg">
+                    <span><i class="fas fa-industry text-blue-400 mr-2"></i>Industrie & Énergie</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </button>
+                <div id="indus-drop" class="dropdown-menu pl-4">
+                    <button onclick="loadCompany('FIRST ENERGY')" class="w-full text-left px-3 py-2 text-sm hover:text-white hover:bg-slate-700 rounded">FIRST ENERGY</button>
+                    <button onclick="loadCompany('SMTP')" class="w-full text-left px-3 py-2 text-sm hover:text-white hover:bg-slate-700 rounded">SMTP</button>
+                    <button onclick="loadCompany('IOI')" class="w-full text-left px-3 py-2 text-sm hover:text-white hover:bg-slate-700 rounded">I.O.I</button>
+                    <button onclick="loadCompany('FERRIS')" class="w-full text-left px-3 py-2 text-sm hover:text-white hover:bg-slate-700 rounded">FERRIS ENG.</button>
+                </div>
+            </div>
+
+            <!-- Pôle Services -->
+            <div class="mb-1">
+                <button onclick="toggleDropdown('serv-drop')" class="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-800 rounded-lg">
+                    <span><i class="fas fa-car text-orange-400 mr-2"></i>Services & Tech</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </button>
+                <div id="serv-drop" class="dropdown-menu pl-4">
+                    <button onclick="loadCompany('ID MOTORS')" class="w-full text-left px-3 py-2 text-sm hover:text-white hover:bg-slate-700 rounded">ID MOTORS</button>
+                    <button onclick="loadCompany('ID RENTAL')" class="w-full text-left px-3 py-2 text-sm hover:text-white hover:bg-slate-700 rounded">ID RENTAL</button>
+                    <button onclick="loadCompany('FLY TECH')" class="w-full text-left px-3 py-2 text-sm hover:text-white hover:bg-slate-700 rounded">FLY TECH</button>
+                    <button onclick="loadCompany('2424MEDIA')" class="w-full text-left px-3 py-2 text-sm hover:text-white hover:bg-slate-700 rounded">2424.MG</button>
+                </div>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- CONTENU PRINCIPAL -->
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
+        
+        <header class="bg-white border-b border-gray-200 px-6 py-3 sticky top-0 z-20 shadow-sm">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 id="page-title" class="text-xl font-bold text-gray-800">Tableau de Bord Exécutif</h2>
+                    <p id="page-subtitle" class="text-sm text-gray-500">Consolidation Groupe & Indicateurs Clés</p>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <!-- Bouton Upload -->
+                    <button onclick="openModal()" class="flex items-center px-4 py-2 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 shadow">
+                        <i class="fas fa-upload mr-2"></i> Upload Mensuel
+                    </button>
+
+                    <!-- Boutons Export -->
+                    <div class="relative">
+                        <button onclick="toggleExportMenu()" class="flex items-center px-4 py-2 bg-teal-600 text-white rounded text-xs font-bold hover:bg-teal-700 shadow">
+                            <i class="fas fa-download mr-2"></i> Exporter <i class="fas fa-caret-down ml-2"></i>
+                        </button>
+                        <div id="export-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border z-50">
+                            <button onclick="exportData('excel')" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"><i class="fas fa-file-excel text-green-600 mr-2"></i>Excel</button>
+                            <button onclick="exportData('pdf')" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"><i class="fas fa-file-pdf text-red-600 mr-2"></i>PDF</button>
+                            <button onclick="exportData('word')" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"><i class="fas fa-file-word text-blue-600 mr-2"></i>Word</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-6" id="content-area">
+            
+            <!-- ================= VUE GROUPE ================= -->
+            <div id="view-group">
+                <!-- Red Flags -->
+                <div class="bg-red-50 border border-red-100 rounded-lg p-4 mb-6">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+                        <div>
+                            <h4 class="font-bold text-red-800">Alertes Stratégiques (Red Flags)</h4>
+                            <p class="text-sm text-red-600">3 alertes critiques détectées.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPIs -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="card p-4"><p class="text-xs text-gray-500 uppercase">CA Consolidé</p><p class="text-xl font-bold mt-1" id="g-kpi-ca">245 Mrd MGA</p><span class="text-xs text-green-600">+15%</span></div>
+                    <div class="card p-4"><p class="text-xs text-gray-500 uppercase">Marge Nette</p><p class="text-xl font-bold mt-1">12.4%</p><span class="text-xs text-red-600">-0.5%</span></div>
+                    <div class="card p-4"><p class="text-xs text-gray-500 uppercase">Trésorerie</p><p class="text-xl font-bold mt-1">18.5 Mrd MGA</p><span class="text-xs text-blue-600">Cash Pooling</span></div>
+                    <div class="card p-4"><p class="text-xs text-gray-500 uppercase">Effectif</p><p class="text-xl font-bold mt-1">3,250</p><span class="text-xs text-gray-400">+120</span></div>
+                </div>
+
+                <!-- Graphiques -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="card p-4"><h4 class="font-bold mb-2">Pareto CA</h4><div class="h-64"><canvas id="groupParetoChart"></canvas></div></div>
+                    <div class="card p-4"><h4 class="font-bold mb-2">Budget vs Réel</h4><div class="h-64"><canvas id="groupBudgetChart"></canvas></div></div>
+                </div>
+            </div>
+
+            <!-- ================= VUE ENTREPRISE ================= -->
+            <div id="view-company" class="hidden">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 id="comp-title" class="text-2xl font-bold text-gray-800"></h3>
+                        <p id="comp-sector" class="text-sm text-gray-500"></p>
+                    </div>
+                    <div id="comp-badge" class="px-3 py-1 rounded text-sm font-bold"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6">
+                    <div class="card p-3 text-center"><p class="text-xs text-gray-500">CA Réel</p><p id="comp-ca" class="font-bold text-lg text-teal-600"></p></div>
+                    <div class="card p-3 text-center"><p class="text-xs text-gray-500">Marge Nette</p><p id="comp-margin" class="font-bold text-lg"></p></div>
+                    <div class="card p-3 text-center"><p class="text-xs text-gray-500">vs Budget</p><p id="comp-budget-var" class="font-bold text-lg"></p></div>
+                    <div class="card p-3 text-center"><p class="text-xs text-gray-500">CA / Employé</p><p id="comp-ca-emp" class="font-bold text-lg"></p></div>
+                    <div class="card p-3 text-center"><p class="text-xs text-gray-500">Risque</p><p id="comp-risk" class="font-bold text-lg"></p></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="card p-4"><h4 class="font-bold mb-3">Suivi Budget</h4><div class="h-64"><canvas id="compBudgetChart"></canvas></div></div>
+                    <div class="card p-4"><h4 class="font-bold mb-3">Pareto Produits</h4><div class="h-64"><canvas id="compParetoChart"></canvas></div></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ================= BOTINVISIO AI ================= -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <!-- Bouton principal -->
+        <button id="chat-toggle" class="bg-slate-800 hover:bg-slate-700 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-2xl border-4 border-teal-400">
+            <i class="fas fa-robot"></i>
+        </button>
+
+        <!-- Fenêtre Chat -->
+        <div id="chat-box" class="hidden absolute bottom-20 right-0 w-96 bg-white rounded-2xl shadow-2xl flex flex-col h-[550px] border border-slate-200 overflow-hidden">
+            <div class="bg-slate-800 p-4 flex justify-between items-center text-white">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-brain text-teal-400"></i>
+                    <span class="font-bold">BotInvisioAI</span>
+                </div>
+                <button onclick="toggleChat()" class="hover:text-teal-300"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <!-- Mode Toggle -->
+            <div class="bg-slate-100 p-2 flex justify-center space-x-2 text-xs border-b">
+                <button onclick="setChatMode('internal')" id="mode-internal" class="px-3 py-1 rounded-full bg-teal-600 text-white font-bold">Analyse Interne</button>
+                <button onclick="setChatMode('web')" id="mode-web" class="px-3 py-1 rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300">Recherche Web</button>
+            </div>
+
+            <div id="chat-history" class="flex-1 p-4 overflow-y-auto space-y-3 text-sm">
+                <div class="flex items-start space-x-2">
+                    <div class="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 text-xs flex-shrink-0"><i class="fas fa-robot"></i></div>
+                    <div class="bg-gray-100 p-3 rounded-lg text-gray-700 max-w-[85%]">
+                        Bonjour. Je suis votre assistant stratégique. Je peux analyser les données du groupe ou chercher des informations sur le web.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-3 bg-white border-t flex items-center">
+                <input id="chat-input" type="text" placeholder="Posez votre question..." class="flex-1 text-sm p-2 border rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500">
+                <button onclick="sendChat()" class="ml-2 bg-teal-600 text-white w-10 h-10 rounded-full hover:bg-teal-700 flex items-center justify-center">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script>
+        // --- BASE DE DONNÉES COMPLÈTE (TOUTES ENTREPRISES ACTIVÉES) ---
+        let db = {
+            'AGRIVET': { sector: 'Agribusiness - Intrants', stars: 3, kpi: { ca: '45 Mrd', margin: '12%', budgetVar: '-2%', caEmp: '140 M', risk: 'Faible' }, budget: { real: [10, 12, 11, 13, 15, 14], budget: [10, 11, 12, 12, 13, 14] }, products: [ { name: 'Aliments Bétail', value: 20 }, { name: 'Intrants', value: 15 }, { name: 'Vétérinaire', value: 10 } ], analysis: "Leader local. Attention à la baisse de marge due aux imports." },
+            'AGRIFARM': { sector: 'Agribusiness - Avicole', stars: 2, kpi: { ca: '12 Mrd', margin: '8%', budgetVar: '0%', caEmp: '100 M', risk: 'Moyen' }, budget: { real: [2, 2, 2.5, 3, 2.5, 3], budget: [2, 2, 2, 3, 3, 3] }, products: [ { name: 'Poussins 1 jour', value: 8 }, { name: 'Œufs', value: 4 } ], analysis: "Stable. Risque biosécurité à surveiller." },
+            'AGRIKOBA': { sector: 'Agribusiness - Maïs', stars: 3, kpi: { ca: '18 Mrd', margin: '14%', budgetVar: '+3%', caEmp: '120 M', risk: 'Faible' }, budget: { real: [3, 3, 4, 4, 5, 5], budget: [3, 3, 3.5, 4, 4, 4] }, products: [ { name: 'Farine Maïs', value: 12 }, { name: 'Semoule', value: 6 } ], analysis: "Bonne transformation locale. Développer les sous-produits." },
+            'BOVIMA': { sector: 'Agribusiness - Élevage', stars: 2, kpi: { ca: '15 Mrd', margin: '18%', budgetVar: '-5%', caEmp: '200 M', risk: 'Moyen' }, budget: { real: [2, 2, 2.5, 3, 3, 3], budget: [2.5, 2.5, 2.5, 3, 3, 3.5] }, products: [ { name: 'Bovins Export', value: 10 }, { name: 'Viande Locale', value: 5 } ], analysis: "Retard sur les objectifs exports. Optimiser les flux logistiques." },
+            'MABEL': { sector: 'Agribusiness - Abattage', stars: 3, kpi: { ca: '22 Mrd', margin: '11%', budgetVar: '+8%', caEmp: '90 M', risk: 'Faible' }, budget: { real: [3, 3.5, 4, 4.5, 5, 5.5], budget: [3, 3, 3.5, 4, 4, 4.5] }, products: [ { name: 'Poulet Entier', value: 12 }, { name: 'Découpes', value: 10 } ], analysis: "Demande forte. Capacité à étendre." },
+            'FIRST ENERGY': { sector: 'Énergie', stars: 3, kpi: { ca: '30 Mrd', margin: '35%', budgetVar: '+10%', caEmp: '350 M', risk: 'Faible' }, budget: { real: [6, 8, 9, 10, 12, 14], budget: [5, 6, 7, 8, 9, 10] }, products: [ { name: 'Electricité Hybride', value: 22 }, { name: 'Solutions Solaires', value: 8 } ], analysis: "Moteur financier du groupe. Cash flow excédentaire." },
+            'SMTP': { sector: 'Industrie Plastique', stars: 3, kpi: { ca: '25 Mrd', margin: '15%', budgetVar: '+5%', caEmp: '120 M', risk: 'Élevé' }, budget: { real: [4, 5, 6, 6, 7, 8], budget: [4, 4, 5, 5, 6, 6] }, products: [ { name: 'Tuyaux PVC', value: 15 }, { name: 'Panneaux', value: 10 } ], analysis: "ALERTE: Saturation usine. Investissement requis." },
+            'IOI': { sector: 'Industrie Hygiène', stars: 2, kpi: { ca: '10 Mrd', margin: '12%', budgetVar: '-1%', caEmp: '110 M', risk: 'Moyen' }, budget: { real: [1.6, 1.6, 1.7, 1.7, 1.7, 1.8], budget: [1.6, 1.7, 1.7, 1.8, 1.8, 1.8] }, products: [ { name: 'Savons Salama', value: 6 }, { name: 'Détergents Oasis', value: 4 } ], analysis: "Forte concurrence imports. Revoir le marketing." },
+            'FERRIS': { sector: 'Construction', stars: 3, kpi: { ca: '20 Mrd', margin: '18%', budgetVar: '+2%', caEmp: '180 M', risk: 'Faible' }, budget: { real: [3, 3.5, 3.5, 4, 4.5, 5], budget: [3, 3, 3.5, 3.5, 4, 4] }, products: [ { name: 'Génie Civil', value: 12 }, { name: 'Bâtiments', value: 8 } ], analysis: "Excellente gestion de projet. Nouveaux appels d'offres à saisir." },
+            'ID MOTORS': { sector: 'Automobile', stars: 2, kpi: { ca: '40 Mrd', margin: '10%', budgetVar: '-3%', caEmp: '190 M', risk: 'Élevé' }, budget: { real: [6, 7, 6.5, 7.5, 8, 8], budget: [6.5, 7, 7, 8, 8, 9] }, products: [ { name: 'Véhicules Neufs', value: 25 }, { name: 'Pièces Détachées', value: 15 } ], analysis: "ALERTE: BFR en hausse. Relance clients nécessaire." },
+            'ID RENTAL': { sector: 'Automobile - Location', stars: 3, kpi: { ca: '15 Mrd', margin: '22%', budgetVar: '+4%', caEmp: '300 M', risk: 'Faible' }, budget: { real: [2, 2.2, 2.5, 2.8, 3, 3.5], budget: [2, 2, 2.2, 2.5, 2.8, 3] }, products: [ { name: 'Location LD', value: 10 }, { name: 'Engins Lourds', value: 5 } ], analysis: "Rentabilité excellente. Acheter de nouveaux engins." },
+            'FLY TECH': { sector: 'Technologie', stars: 2, kpi: { ca: '8 Mrd', margin: '9%', budgetVar: '+1%', caEmp: '160 M', risk: 'Moyen' }, budget: { real: [1.3, 1.3, 1.4, 1.4, 1.5, 1.5], budget: [1.3, 1.3, 1.3, 1.4, 1.4, 1.4] }, products: [ { name: 'Smartphones', value: 5 }, { name: 'Accessoires', value: 3 } ], analysis: "Marché tech stable. Développer le SAV." },
+            '2424MEDIA': { sector: 'Média Digital', stars: 1, kpi: { ca: '2 Mrd', margin: '5%', budgetVar: '-5%', caEmp: '50 M', risk: 'Élevé' }, budget: { real: [0.3, 0.3, 0.3, 0.35, 0.4, 0.4], budget: [0.35, 0.35, 0.35, 0.4, 0.4, 0.45] }, products: [ { name: 'Publicité', value: 1.5 }, { name: 'Contenus', value: 0.5 } ], analysis: "Audience en croissance mais monétisation difficile." }
+        };
+        
+        let currentView = 'group';
+        let currentCompany = null;
+        let chatMode = 'internal';
+        let groupParetoChart, groupBudgetChart, compBudgetChart, compParetoChart;
+
+        // --- NAVIGATION ---
+        function toggleDropdown(id) { document.getElementById(id).classList.toggle('open'); }
+        function toggleChat() { document.getElementById('chat-box').classList.toggle('hidden'); }
+        function toggleExportMenu() { document.getElementById('export-menu').classList.toggle('hidden'); }
+        
+        function showView(viewName) {
+            currentView = viewName;
+            document.getElementById('view-group').classList.add('hidden');
+            document.getElementById('view-company').classList.add('hidden');
+            document.getElementById(`view-${viewName}`).classList.remove('hidden');
+            if(viewName === 'group') { currentCompany = null; initGroupCharts(); }
+        }
+
+        function loadCompany(id) {
+            const data = db[id];
+            if(!data) return alert("Données non disponibles");
+            currentCompany = id;
+            showView('company');
+            document.getElementById('comp-title').innerText = id;
+            document.getElementById('comp-sector').innerText = data.sector;
+            
+            const riskClass = data.kpi.risk === 'Faible' ? 'bg-good status-good' : (data.kpi.risk === 'Moyen' ? 'bg-warn status-warn' : 'bg-danger status-danger');
+            document.getElementById('comp-badge').className = `px-3 py-1 rounded text-sm font-bold ${riskClass}`;
+            document.getElementById('comp-badge').innerText = `Risque ${data.kpi.risk}`;
+            
+            document.getElementById('comp-ca').innerText = data.kpi.ca;
+            document.getElementById('comp-margin').innerText = data.kpi.margin;
+            document.getElementById('comp-budget-var').innerText = data.kpi.budgetVar;
+            document.getElementById('comp-ca-emp').innerText = data.kpi.caEmp;
+            document.getElementById('comp-risk').innerText = data.kpi.risk;
+            
+            renderCompCharts(data);
+        }
+
+        // --- GRAPHIQUES ---
+        function initGroupCharts() {
+            if(groupParetoChart) groupParetoChart.destroy();
+            if(groupBudgetChart) groupBudgetChart.destroy();
+            
+            const ctx1 = document.getElementById('groupParetoChart').getContext('2d');
+            groupParetoChart = new Chart(ctx1, {
+                type: 'bar', data: { labels: ['ID MOTORS', 'AGRIVET', 'FIRST ENERGY', 'SMTP', 'MABEL', 'Autres'], datasets: [{ label: 'CA', data: [40, 45, 30, 25, 22, 83], backgroundColor: '#319796' }] }
+            });
+
+            const ctx2 = document.getElementById('groupBudgetChart').getContext('2d');
+            groupBudgetChart = new Chart(ctx2, {
+                type: 'line', data: { labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'], datasets: [{ label: 'Budget', data: [30, 32, 35, 38, 40, 42], borderColor: '#cbd5e0', borderDash: [5, 5] }, { label: 'Réel', data: [28, 34, 36, 41, 45, 43], borderColor: '#319795', fill: true }] }
+            });
+        }
+
+        function renderCompCharts(data) {
+            if(compBudgetChart) compBudgetChart.destroy();
+            if(compParetoChart) compParetoChart.destroy();
+            
+            const ctxB = document.getElementById('compBudgetChart').getContext('2d');
+            compBudgetChart = new Chart(ctxB, { type: 'bar', data: { labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'], datasets: [{ label: 'Budget', data: data.budget.budget, backgroundColor: 'rgba(203, 213, 225, 0.5)' }, { label: 'Réel', data: data.budget.real, backgroundColor: 'rgba(49, 152, 149, 0.7)' }] } });
+
+            const ctxP = document.getElementById('compParetoChart').getContext('2d');
+            compParetoChart = new Chart(ctxP, { type: 'bar', data: { labels: data.products.map(p => p.name), datasets: [{ label: 'CA Produit', data: data.products.map(p => p.value), backgroundColor: '#2b6cb0' }] } });
+        }
+
+        initGroupCharts();
+
+        // --- FONCTIONNALITÉS EXPORT ---
+        function exportData(type) {
+            let dataToExport = [];
+            let filename = currentCompany || "Groupe_INVISO";
+            
+            if (currentView === 'group') {
+                dataToExport = [
+                    { Entite: "ID MOTORS", CA: "40 Mrd", Marge: "10%", Risque: "Élevé" },
+                    { Entite: "AGRIVET", CA: "45 Mrd", Marge: "12%", Risque: "Faible" },
+                    { Entite: "FIRST ENERGY", CA: "30 Mrd", Marge: "35%", Risque: "Faible" }
+                ];
+            } else {
+                const d = db[currentCompany];
+                dataToExport = [
+                    { Indicateur: "Chiffre d'Affaires", Valeur: d.kpi.ca },
+                    { Indicateur: "Marge Nette", Valeur: d.kpi.margin },
+                    { Indicateur: "Performance Budget", Valeur: d.kpi.budgetVar },
+                    { Indicateur: "Risque", Valeur: d.kpi.risk }
+                ];
+            }
+
+            if(type === 'excel') {
+                const ws = XLSX.utils.json_to_sheet(dataToExport);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Rapport");
+                XLSX.writeFile(wb, filename + ".xlsx");
+            }
+            
+            else if(type === 'pdf') {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                doc.text("Rapport INVISO Group - " + filename, 14, 16);
+                doc.autoTable({ head: [Object.keys(dataToExport[0])], body: dataToExport.map(Object.values), startY: 20 });
+                doc.save(filename + ".pdf");
+            }
+            
+            else if(type === 'word') {
+                alert("Export Word simulé (nécéssite une librairie spécifique côté serveur pour un formatage parfait).");
+            }
+            toggleExportMenu();
+        }
+
+        // --- FONCTIONNALITÉ UPLOAD ---
+        function openModal() { document.getElementById('upload-modal').classList.add('modal-active'); }
+        function closeModal() { document.getElementById('upload-modal').classList.remove('modal-active'); }
+        
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if(file) document.getElementById('file-name').innerText = file.name;
+        }
+
+        function processUpload() {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+            if(!file) return alert("Veuillez choisir un fichier.");
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                alert("Fichier '" + file.name + "' traité avec succès ! \n(Les données sont mises à jour en mémoire).");
+                // Simuler une mise à jour de données
+                db['AGRIVET'].kpi.ca = "46 Mrd (MàJ)";
+                loadCompany('AGRIVET'); // Rechargement simulé
+                closeModal();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // --- BOTINVISIO AI LOGIC ---
+        function setChatMode(mode) {
+            chatMode = mode;
+            document.getElementById('mode-internal').className = mode === 'internal' ? 'px-3 py-1 rounded-full bg-teal-600 text-white font-bold' : 'px-3 py-1 rounded-full bg-gray-200 text-gray-600';
+            document.getElementById('mode-web').className = mode === 'web' ? 'px-3 py-1 rounded-full bg-teal-600 text-white font-bold' : 'px-3 py-1 rounded-full bg-gray-200 text-gray-600';
+        }
+
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim();
+            if(!msg) return;
+            
+            const history = document.getElementById('chat-history');
+            history.innerHTML += `<div class="flex justify-end"><div class="bg-teal-600 text-white p-3 rounded-lg ml-8 text-right">${msg}</div></div>`;
+            input.value = '';
+
+            // Typing indicator
+            const loaderId = 'loader-' + Date.now();
+            history.innerHTML += `<div id="${loaderId}" class="flex items-start space-x-2"><div class="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 text-xs"><i class="fas fa-robot"></i></div><div class="bg-gray-100 p-3 rounded-lg"><i class="fas fa-circle-notch fa-spin text-teal-500"></i></div></div>`;
+            history.scrollTop = history.scrollHeight;
+
+            setTimeout(() => {
+                document.getElementById(loaderId).remove();
+                let response = "";
+                
+                if(chatMode === 'internal') {
+                    // Analyse Interne
+                    if(msg.toLowerCase().includes('risque')) {
+                        response = "Analyse des risques : SMTP et ID MOTORS présentent un risque Élevé. SMTP pour saturation, ID MOTORS pour le BFR.";
+                    } else if(msg.toLowerCase().includes('marge')) {
+                        response = "La meilleure marge est détenue par FIRST ENERGY (35%), suivie de ID RENTAL (22%). La moyenne groupe est 12.4%.";
+                    } else if(msg.toLowerCase().includes('croissance')) {
+                        response = "Les entités les plus dynamiques sont MABEL (+8% vs budget) et FIRST ENERGY (+10%).";
+                    } else {
+                        response = "J'ai analysé les données. Le groupe est en croissance (+15%). Voulez-vous des détails sur un pôle spécifique ?";
+                    }
+                } else {
+                    // Mode Web Scraping (Simulé)
+                    response = `<b>[Résultat Web Simulé]</b><br>Recherche : "${msg}"<br>1. <a href='#' class='text-teal-600 underline'>Article sur l'économie Malgache...</a><br>2. <a href='#' class='text-teal-600 underline'>Tendance prix carburant...</a><br><br>Synthèse : Le marché local est stable mais sensible aux fluctuations des prix de l'import.`;
+                }
+
+                history.innerHTML += `<div class="flex items-start space-x-2"><div class="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 text-xs flex-shrink-0"><i class="fas fa-robot"></i></div><div class="bg-gray-100 p-3 rounded-lg text-gray-700 max-w-[85%]">${response}</div></div>`;
+                history.scrollTop = history.scrollHeight;
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
